@@ -1402,11 +1402,21 @@ function App() {
                     type="button"
                     onClick={togglePlayback}
                     className={clsx(
-                      'inline-flex h-10 w-10 items-center justify-center bg-gradient-to-br from-blush-500 to-sage-500 text-white shadow-lg transition hover:opacity-90',
-                      isMusicPlaying && 'ring-2 ring-offset-2 ring-offset-white/0 ring-sage-300',
+                      'group relative inline-flex h-14 w-14 items-center justify-center rounded-full transition-all duration-300',
+                      isMusicPlaying
+                        ? 'bg-gradient-to-br from-blush-500 to-sage-500 shadow-xl shadow-blush-500/30'
+                        : 'bg-white shadow-lg hover:shadow-xl',
                     )}
                   >
-                    {isMusicPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+                    <div className={clsx(
+                      'absolute inset-0 rounded-full transition-all duration-300',
+                      isMusicPlaying ? 'ring-[0.5px] ring-blush-400/40' : 'ring-[0.5px] ring-slate-200'
+                    )} />
+                    {isMusicPlaying ? (
+                      <Pause className="relative h-5 w-5 text-white" strokeWidth={1.5} />
+                    ) : (
+                      <Play className="relative h-5 w-5 text-slate-700 group-hover:text-blush-500 transition-colors" strokeWidth={1.5} />
+                    )}
                   </button>
                   <label className="flex items-center gap-2">
                     {volume === 0 ? <VolumeX className="h-4 w-4 text-slate-500" /> : <Volume2 className="h-4 w-4 text-slate-500" />}
@@ -1471,12 +1481,21 @@ function App() {
             type="button"
             onClick={togglePlayback}
             className={clsx(
-              'flex items-center justify-center gap-2 px-4 py-2 text-xs font-semibold transition sm:text-sm',
-              isMusicPlaying ? 'bg-gradient-to-r from-blush-500 to-sage-500 text-white shadow' : 'bg-white text-slate-600 shadow-inner',
+              'group relative inline-flex h-11 w-11 items-center justify-center rounded-full transition-all duration-300',
+              isMusicPlaying
+                ? 'bg-gradient-to-br from-blush-500 to-sage-500 shadow-lg shadow-blush-500/30'
+                : 'bg-white shadow-sm hover:shadow-md',
             )}
           >
-            {isMusicPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-            音乐
+            <div className={clsx(
+              'absolute inset-0 rounded-full transition-all duration-300',
+              isMusicPlaying ? 'ring-[0.5px] ring-blush-400/40' : 'ring-[0.5px] ring-slate-200'
+            )} />
+            {isMusicPlaying ? (
+              <Pause className="relative h-4 w-4 text-white" strokeWidth={1.5} />
+            ) : (
+              <Play className="relative h-4 w-4 text-slate-700 group-hover:text-blush-500 transition-colors" strokeWidth={1.5} />
+            )}
           </button>
           <span className="h-6 w-px bg-slate-200" />
           <button
