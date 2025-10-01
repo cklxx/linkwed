@@ -5,6 +5,8 @@ import { motion } from 'framer-motion'
 import { useLocation, useNavigate } from 'react-router-dom'
 import {
   Calendar,
+  ChevronLeft,
+  ChevronRight,
   Clock,
   Eye,
   Heart,
@@ -153,9 +155,10 @@ function App() {
   const [isSearching, setIsSearching] = useState(false)
   const [locationError, setLocationError] = useState<string | null>(null)
   const [musicTrack, setMusicTrack] = useState<MusicTrack>({ ...DEFAULT_TRACK })
-  const [isMusicPlaying, setIsMusicPlaying] = useState(false)
+  const [isMusicPlaying, setIsMusicPlaying] = useState(true)
   const [musicError, setMusicError] = useState<string | null>(null)
   const [volume, setVolume] = useState(0.6)
+  const [currentSlide, setCurrentSlide] = useState(0)
   const [isDesktop, setIsDesktop] = useState(() => {
     if (typeof window === 'undefined') return false
     return window.matchMedia('(min-width: 1024px)').matches
@@ -656,7 +659,7 @@ function App() {
 
     const timer = window.setTimeout(() => {
       void persistState()
-    }, 480)
+    }, 300)
 
     saveTimerRef.current = timer
 
@@ -915,30 +918,85 @@ function App() {
                 </ul>
               </div>
 
-              {details.story && (
-                <div className="rounded-3xl bg-gradient-to-br from-white to-slate-50/80 p-6">
-                  <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-900 sm:text-base">
-                    <Wand2 className="h-5 w-5 text-sage-600" /> 我们的故事
-                  </h3>
-                  <p className="mt-3 text-sm leading-relaxed text-slate-600 sm:text-base">{details.story}</p>
-                </div>
-              )}
-
               {galleryImages.length > 0 && (
-                <div>
-                  <h3 className="text-sm font-semibold text-slate-900 sm:text-base">回忆相册</h3>
-                  <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
-                    {galleryImages.map((image) => (
-                      <figure key={image.id} className="group relative overflow-hidden rounded-xl">
-                        <img
-                          src={image.src}
-                          alt={image.name}
-                          className="h-24 w-full object-cover transition duration-500 group-hover:scale-105 sm:h-28"
-                        />
-                        <div className="absolute inset-0 bg-black/0 transition group-hover:bg-black/25" />
-                      </figure>
-                    ))}
-                  </div>
+                <div className="space-y-12">
+                  {galleryImages.map((image, index) => {
+                    const isEven = index % 2 === 0
+                    return (
+                      <motion.div
+                        key={image.id}
+                        initial={{ opacity: 0, y: 40 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true, margin: '-100px' }}
+                        transition={{ duration: 0.8, delay: index * 0.1 }}
+                        className={clsx(
+                          'grid grid-cols-1 gap-6 items-center',
+                          isDesktop && 'lg:grid-cols-2',
+                          isEven ? 'lg:grid-flow-col' : 'lg:grid-flow-col-dense',
+                        )}
+                      >
+                        <motion.div
+                          className={clsx('relative overflow-hidden rounded-3xl shadow-2xl', isEven ? 'lg:col-start-1' : 'lg:col-start-2')}
+                          whileHover={{ scale: 1.02 }}
+                          transition={{ duration: 0.3 }}
+                        >
+                          <div className="aspect-[4/3] relative">
+                            <img
+                              src={image.src}
+                              alt={image.name}
+                              className="absolute inset-0 w-full h-full object-cover"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent" />
+                          </div>
+                        </motion.div>
+
+                        <motion.div
+                          className={clsx(
+                            'space-y-4 p-6 sm:p-8',
+                            isEven ? 'lg:col-start-2 lg:text-left' : 'lg:col-start-1 lg:text-right',
+                          )}
+                          initial={{ opacity: 0, x: isEven ? 40 : -40 }}
+                          whileInView={{ opacity: 1, x: 0 }}
+                          viewport={{ once: true }}
+                          transition={{ duration: 0.8, delay: 0.2 + index * 0.1 }}
+                        >
+                          <div className={clsx('inline-block', !isEven && isDesktop && 'lg:float-right')}>
+                            <div className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-blush-500/20 to-sage-500/20 px-4 py-2">
+                              <div className="h-2 w-2 rounded-full bg-gradient-to-r from-blush-500 to-sage-500" />
+                              <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-700">
+                                {index === 0 && '初见'}
+                                {index === 1 && '相识'}
+                                {index === 2 && '相知'}
+                                {index === 3 && '相守'}
+                                {index === 4 && '相伴'}
+                                {index === 5 && '永恒'}
+                              </span>
+                            </div>
+                          </div>
+                          {details.story && index === 0 && (
+                            <div className="space-y-3">
+                              <h3 className={clsx('flex items-center gap-2 text-lg font-semibold text-slate-900 sm:text-xl', !isEven && isDesktop && 'lg:justify-end')}>
+                                <Wand2 className="h-5 w-5 text-sage-600" />
+                                <span>我们的故事</span>
+                              </h3>
+                              <p className="text-sm leading-relaxed text-slate-600 sm:text-base">
+                                {details.story}
+                              </p>
+                            </div>
+                          )}
+                          {index > 0 && (
+                            <p className="text-sm leading-relaxed text-slate-600 sm:text-base italic">
+                              {index === 1 && '从陌生到熟悉，每一次相遇都是命运最好的安排。'}
+                              {index === 2 && '时光静好，与君共度。那些平凡的日子里，藏着最真挚的情感。'}
+                              {index === 3 && '携手同行，共赴未来。愿我们的爱如这美景，永恒而美好。'}
+                              {index === 4 && '在彼此的陪伴中，找到了生命中最温暖的港湾。'}
+                              {index === 5 && '承诺一生，不负相遇。让我们在爱的见证下，开启新的篇章。'}
+                            </p>
+                          )}
+                        </motion.div>
+                      </motion.div>
+                    )
+                  })}
                 </div>
               )}
 
