@@ -338,7 +338,8 @@ function App() {
   const onDropHero = useCallback(async (acceptedFiles: File[]) => {
     if (!acceptedFiles.length) return
     const file = acceptedFiles[0]
-    const tempId = createId()
+    const ext = file.name.split('.').pop() || 'jpg'
+    const tempId = `${createId()}.${ext}`
     const tempSrc = URL.createObjectURL(file)
 
     // 立即显示预览
@@ -402,13 +403,16 @@ function App() {
   const onDropGallery = useCallback(async (acceptedFiles: File[]) => {
     if (!acceptedFiles.length) return
 
-    const filesToUpload = acceptedFiles.slice(0, 6).map((file) => ({
-      id: createId(),
-      name: file.name,
-      src: URL.createObjectURL(file),
-      file,
-      uploading: true,
-    }))
+    const filesToUpload = acceptedFiles.slice(0, 6).map((file) => {
+      const ext = file.name.split('.').pop() || 'jpg'
+      return {
+        id: `${createId()}.${ext}`,
+        name: file.name,
+        src: URL.createObjectURL(file),
+        file,
+        uploading: true,
+      }
+    })
 
     // 立即显示预览
     setGalleryImages((prev) => {
