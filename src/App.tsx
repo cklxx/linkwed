@@ -156,6 +156,7 @@ function App() {
   const [isMusicPlaying, setIsMusicPlaying] = useState(true)
   const [musicError, setMusicError] = useState<string | null>(null)
   const [volume, setVolume] = useState(0.6)
+  const [isSaving, setIsSaving] = useState(false)
   const [isDesktop, setIsDesktop] = useState(() => {
     if (typeof window === 'undefined') return false
     return window.matchMedia('(min-width: 1024px)').matches
@@ -539,116 +540,123 @@ function App() {
   const persistState = useCallback(async () => {
     if (!hasHydratedRef.current) return
 
-    const keepIds = new Set<string>()
-    let heroMeta: StoredImageMeta | undefined
+    setIsSaving(true)
+    try {
+      const keepIds = new Set<string>()
+      let heroMeta: StoredImageMeta | undefined
 
-    if (heroImage) {
-      keepIds.add(heroImage.id)
-      try {
-        let heroSource: Blob
-        if (heroImage.file) {
-          heroSource = heroImage.file
-        } else {
-          const response = await fetch(heroImage.src)
-          heroSource = await response.blob()
-        }
-        await upsertAsset(heroImage.id, heroSource)
-        heroMeta = {
-          id: heroImage.id,
-          name: heroImage.name,
-          type: heroImage.file?.type ?? heroSource.type ?? undefined,
-        }
-      } catch (error) {
-        console.error('保存封面图失败', error)
-      }
-    }
-
-    const galleryMetas: StoredImageMeta[] = []
-    if (galleryImages.length) {
-      const galleryResults = await Promise.all(
-        galleryImages.map(async (image) => {
-          keepIds.add(image.id)
-          try {
-            let gallerySource: Blob
-            if (image.file) {
-              gallerySource = image.file
-            } else {
-              const response = await fetch(image.src)
-              gallerySource = await response.blob()
-            }
-            await upsertAsset(image.id, gallerySource)
-            return {
-              id: image.id,
-              name: image.name,
-              type: image.file?.type ?? gallerySource.type ?? undefined,
-            } satisfies StoredImageMeta
-          } catch (error) {
-            console.error('保存相册图片失败', error)
-            return {
-              id: image.id,
-              name: image.name,
-              type: image.file?.type,
-            } satisfies StoredImageMeta
+      if (heroImage) {
+        keepIds.add(heroImage.id)
+        try {
+          let heroSource: Blob
+          if (heroImage.file) {
+            heroSource = heroImage.file
+          } else {
+            const response = await fetch(heroImage.src)
+            heroSource = await response.blob()
           }
-        }),
-      )
-      galleryMetas.push(...galleryResults.filter(Boolean))
-    }
-
-    let musicMeta: StoredMusicMeta
-    const isPresetTrack = PRESET_TRACKS.some((preset) => preset.id === musicTrack.id)
-
-    if (isPresetTrack) {
-      musicMeta = {
-        mode: 'preset',
-        id: musicTrack.id,
-        name: musicTrack.name,
-        credit: musicTrack.credit,
-        src: musicTrack.src,
-      }
-    } else {
-      keepIds.add(musicTrack.id)
-      try {
-        let audioSource: Blob
-        if (musicTrack.file) {
-          audioSource = musicTrack.file
-        } else {
-          const response = await fetch(musicTrack.src)
-          audioSource = await response.blob()
+          await upsertAsset(heroImage.id, heroSource)
+          heroMeta = {
+            id: heroImage.id,
+            name: heroImage.name,
+            type: heroImage.file?.type ?? heroSource.type ?? undefined,
+          }
+        } catch (error) {
+          console.error('保存封面图失败', error)
         }
-        await upsertAsset(musicTrack.id, audioSource)
+      }
+
+      const galleryMetas: StoredImageMeta[] = []
+      if (galleryImages.length) {
+        const galleryResults = await Promise.all(
+          galleryImages.map(async (image) => {
+            keepIds.add(image.id)
+            try {
+              let gallerySource: Blob
+              if (image.file) {
+                gallerySource = image.file
+              } else {
+                const response = await fetch(image.src)
+                gallerySource = await response.blob()
+              }
+              await upsertAsset(image.id, gallerySource)
+              return {
+                id: image.id,
+                name: image.name,
+                type: image.file?.type ?? gallerySource.type ?? undefined,
+              } satisfies StoredImageMeta
+            } catch (error) {
+              console.error('保存相册图片失败', error)
+              return {
+                id: image.id,
+                name: image.name,
+                type: image.file?.type,
+              } satisfies StoredImageMeta
+            }
+          }),
+        )
+        galleryMetas.push(...galleryResults.filter(Boolean))
+      }
+
+      let musicMeta: StoredMusicMeta
+      const isPresetTrack = PRESET_TRACKS.some((preset) => preset.id === musicTrack.id)
+
+      if (isPresetTrack) {
         musicMeta = {
-          mode: 'custom',
+          mode: 'preset',
           id: musicTrack.id,
           name: musicTrack.name,
           credit: musicTrack.credit,
           src: musicTrack.src,
-          type: musicTrack.file?.type ?? audioSource.type ?? undefined,
         }
-      } catch (error) {
-        console.error('保存自定义音乐失败', error)
-        musicMeta = {
-          mode: 'custom',
-          id: musicTrack.id,
-          name: musicTrack.name,
-          credit: musicTrack.credit,
-          src: musicTrack.src,
+      } else {
+        keepIds.add(musicTrack.id)
+        try {
+          let audioSource: Blob
+          if (musicTrack.file) {
+            audioSource = musicTrack.file
+          } else {
+            const response = await fetch(musicTrack.src)
+            audioSource = await response.blob()
+          }
+          await upsertAsset(musicTrack.id, audioSource)
+          musicMeta = {
+            mode: 'custom',
+            id: musicTrack.id,
+            name: musicTrack.name,
+            credit: musicTrack.credit,
+            src: musicTrack.src,
+            type: musicTrack.file?.type ?? audioSource.type ?? undefined,
+          }
+        } catch (error) {
+          console.error('保存自定义音乐失败', error)
+          musicMeta = {
+            mode: 'custom',
+            id: musicTrack.id,
+            name: musicTrack.name,
+            credit: musicTrack.credit,
+            src: musicTrack.src,
+          }
         }
       }
-    }
 
-    const snapshot: StoredState = {
-      details,
-      coordinates,
-      locationQuery,
-      heroImage: heroMeta,
-      galleryImages: galleryMetas,
-      music: musicMeta,
-      volume,
-    }
+      const snapshot: StoredState = {
+        details,
+        coordinates,
+        locationQuery,
+        heroImage: heroMeta,
+        galleryImages: galleryMetas,
+        music: musicMeta,
+        volume,
+      }
 
-    saveSnapshot(snapshot)
-    await removeUnusedAssets(keepIds)
+      await saveSnapshot(snapshot)
+      await removeUnusedAssets(keepIds)
+    } catch (error) {
+      console.error('保存失败', error)
+    } finally {
+      setIsSaving(false)
+    }
   }, [coordinates, details, galleryImages, heroImage, locationQuery, musicTrack, volume])
 
   useEffect(() => {
@@ -753,6 +761,21 @@ function App() {
   return (
     <div className="relative min-h-screen pb-24 sm:pb-16">
       <div className="absolute inset-0 -z-10 bg-hero-texture opacity-80" />
+
+      {isSaving && (
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0 }}
+          className="fixed top-4 right-4 z-50 flex items-center gap-2 rounded-full bg-gradient-to-r from-blush-500 to-sage-500 px-4 py-2 text-sm font-medium text-white shadow-lg"
+        >
+          <svg className="h-4 w-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          保存中...
+        </motion.div>
+      )}
 
       <motion.header
         className="mx-auto max-w-5xl px-4 pt-12 sm:px-6 sm:pt-14"
