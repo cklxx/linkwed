@@ -118,9 +118,28 @@ const bootstrap = async () => {
   const app = express()
   const PORT = process.env.SERVER_PORT || process.env.PORT || 3000
 
+  // 打印配置信息
+  console.log('📁 Server directories:')
+  console.log('   UPLOAD_DIR:', UPLOAD_DIR)
+  console.log('   DIST_DIR:', DIST_DIR)
+  console.log('   PUBLIC_DIR:', PUBLIC_DIR)
+
   app.use(cors())
   app.use(express.json({ limit: '25mb' }))
-  app.use('/uploads', express.static(UPLOAD_DIR))
+
+  // 静态文件服务 - 必须在通配路由之前
+  app.use('/uploads', express.static(UPLOAD_DIR, {
+    setHeaders: (res, filePath) => {
+      // 设置正确的 Content-Type
+      if (filePath.endsWith('.jpg') || filePath.endsWith('.jpeg')) {
+        res.setHeader('Content-Type', 'image/jpeg')
+      } else if (filePath.endsWith('.png')) {
+        res.setHeader('Content-Type', 'image/png')
+      } else if (filePath.endsWith('.webp')) {
+        res.setHeader('Content-Type', 'image/webp')
+      }
+    }
+  }))
   app.use(express.static(DIST_DIR))
 
   const storage = multer.diskStorage({
@@ -175,12 +194,18 @@ const bootstrap = async () => {
     })
   })
 
-  app.get('*', (_req, res, next) => {
+  // 通配路由 - 必须在最后，处理 SPA 路由
+  app.get('*', (req, res, next) => {
+    // 跳过 API 和静态资源请求
+    if (req.path.startsWith('/api/') || req.path.startsWith('/uploads/')) {
+      return next()
+    }
+
     const indexPath = path.join(DIST_DIR, 'index.html')
     if (fsSync.existsSync(indexPath)) {
       res.sendFile(indexPath)
     } else {
-      next()
+      res.status(404).send('Application not built yet. Run: npm run build')
     }
   })
 
