@@ -120,9 +120,16 @@ const bootstrap = async () => {
 
   // 打印配置信息
   console.log('📁 Server directories:')
+  console.log('   ROOT:', ROOT)
+  console.log('   PUBLIC_DIR:', PUBLIC_DIR)
   console.log('   UPLOAD_DIR:', UPLOAD_DIR)
   console.log('   DIST_DIR:', DIST_DIR)
-  console.log('   PUBLIC_DIR:', PUBLIC_DIR)
+  console.log('   DATA_DIR:', DATA_DIR)
+
+  // 检查目录是否存在
+  console.log('\n📂 Directory status:')
+  console.log('   UPLOAD_DIR exists:', fsSync.existsSync(UPLOAD_DIR))
+  console.log('   DIST_DIR exists:', fsSync.existsSync(DIST_DIR))
 
   app.use(cors())
   app.use(express.json({ limit: '25mb' }))
@@ -181,17 +188,35 @@ const bootstrap = async () => {
 
   app.post('/api/upload', upload.single('file'), (req, res) => {
     if (!req.file) {
+      console.error('❌ Upload failed: No file received')
       res.status(400).json({ message: '未接收到文件' })
       return
     }
 
-    res.json({
+    const fileInfo = {
       id: req.file.filename,
       name: req.file.originalname,
       url: `/uploads/${req.file.filename}`,
       type: req.file.mimetype,
       size: req.file.size,
-    })
+      savedPath: req.file.path,
+    }
+
+    console.log('✅ File uploaded successfully:')
+    console.log('   Filename:', fileInfo.id)
+    console.log('   Original:', fileInfo.name)
+    console.log('   Saved to:', fileInfo.savedPath)
+    console.log('   Size:', (fileInfo.size / 1024).toFixed(2), 'KB')
+    console.log('   URL:', fileInfo.url)
+
+    // 验证文件是否真实存在
+    if (!fsSync.existsSync(fileInfo.savedPath)) {
+      console.error('❌ File not found after save:', fileInfo.savedPath)
+      res.status(500).json({ message: '文件保存失败' })
+      return
+    }
+
+    res.json(fileInfo)
   })
 
   // 通配路由 - 必须在最后，处理 SPA 路由
