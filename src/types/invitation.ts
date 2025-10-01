@@ -35,7 +35,9 @@ export interface UploadedImage {
   name: string
   src: string
   file?: File
-  pending?: boolean
+  uploading?: boolean
+  uploaded?: boolean
+  error?: string
 }
 
 export interface MusicTrack {
@@ -45,5 +47,7 @@ export interface MusicTrack {
   isDefault: boolean
   credit?: string
   file?: File
-  pending?: boolean
+  uploading?: boolean
+  uploaded?: boolean
+  error?: string
 }

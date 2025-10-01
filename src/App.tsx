@@ -335,33 +335,118 @@ function App() {
     }))
   }
 
-  const onDropHero = useCallback((acceptedFiles: File[]) => {
+  const onDropHero = useCallback(async (acceptedFiles: File[]) => {
     if (!acceptedFiles.length) return
     const file = acceptedFiles[0]
-    const src = URL.createObjectURL(file)
+    const tempId = createId()
+    const tempSrc = URL.createObjectURL(file)
+
+    // 立即显示预览
     setHeroImage((prev) => {
       if (prev) URL.revokeObjectURL(prev.src)
       return {
-        id: createId(),
+        id: tempId,
         name: file.name,
-        src,
+        src: tempSrc,
         file,
+        uploading: true,
       }
     })
+
+    // 立即上传到服务器
+    try {
+      await upsertAsset(tempId, file)
+      const API_BASE = import.meta.env.VITE_API_BASE?.replace(/\/$/, '') ?? ''
+      const serverUrl = `${API_BASE}/uploads/${tempId}`
+
+      // 上传成功，更新为服务器URL
+      setHeroImage((prev) => {
+        if (prev?.id === tempId) {
+          URL.revokeObjectURL(tempSrc)
+          return {
+            ...prev,
+            src: serverUrl,
+            uploading: false,
+            uploaded: true,
+          }
+        }
+        return prev
+      })
+    } catch (error) {
+      console.error('上传封面图失败', error)
+      // 上传失败，保持本地预览但标记错误
+      setHeroImage((prev) => {
+        if (prev?.id === tempId) {
+          return {
+            ...prev,
+            uploading: false,
+            error: '上传失败，请重试',
+          }
+        }
+        return prev
+      })
+    }
   }, [])
 
-  const onDropGallery = useCallback((acceptedFiles: File[]) => {
+  const onDropGallery = useCallback(async (acceptedFiles: File[]) => {
     if (!acceptedFiles.length) return
-    const mapped = acceptedFiles.slice(0, 6).map((file) => ({
+
+    const filesToUpload = acceptedFiles.slice(0, 6).map((file) => ({
       id: createId(),
       name: file.name,
       src: URL.createObjectURL(file),
       file,
+      uploading: true,
     }))
+
+    // 立即显示预览
     setGalleryImages((prev) => {
-      const next = [...prev, ...mapped].slice(0, 6)
+      const next = [...prev, ...filesToUpload].slice(0, 6)
       return next
     })
+
+    // 并发上传所有图片
+    const API_BASE = import.meta.env.VITE_API_BASE?.replace(/\/$/, '') ?? ''
+
+    await Promise.allSettled(
+      filesToUpload.map(async (item) => {
+        try {
+          await upsertAsset(item.id, item.file)
+          const serverUrl = `${API_BASE}/uploads/${item.id}`
+
+          // 上传成功，更新为服务器URL
+          setGalleryImages((prev) =>
+            prev.map((img) => {
+              if (img.id === item.id) {
+                URL.revokeObjectURL(item.src)
+                return {
+                  ...img,
+                  src: serverUrl,
+                  uploading: false,
+                  uploaded: true,
+                }
+              }
+              return img
+            }),
+          )
+        } catch (error) {
+          console.error(`上传图片 ${item.name} 失败`, error)
+          // 上传失败，标记错误
+          setGalleryImages((prev) =>
+            prev.map((img) => {
+              if (img.id === item.id) {
+                return {
+                  ...img,
+                  uploading: false,
+                  error: '上传失败',
+                }
+              }
+              return img
+            }),
+          )
+        }
+      }),
+    )
   }, [])
 
   const removeGalleryImage = (id: string) => {
@@ -528,58 +613,27 @@ function App() {
       const keepIds = new Set<string>()
       let heroMeta: StoredImageMeta | undefined
 
-      if (heroImage) {
+      // 封面图已经在上传时保存，只需记录元数据
+      if (heroImage && heroImage.uploaded) {
         keepIds.add(heroImage.id)
-        try {
-          let heroSource: Blob
-          if (heroImage.file) {
-            heroSource = heroImage.file
-          } else {
-            const response = await fetch(heroImage.src)
-            heroSource = await response.blob()
-          }
-          await upsertAsset(heroImage.id, heroSource)
-          heroMeta = {
-            id: heroImage.id,
-            name: heroImage.name,
-            type: heroImage.file?.type ?? heroSource.type ?? undefined,
-          }
-        } catch (error) {
-          console.error('保存封面图失败', error)
+        heroMeta = {
+          id: heroImage.id,
+          name: heroImage.name,
+          type: heroImage.file?.type,
         }
       }
 
-      const galleryMetas: StoredImageMeta[] = []
-      if (galleryImages.length) {
-        const galleryResults = await Promise.all(
-          galleryImages.map(async (image) => {
-            keepIds.add(image.id)
-            try {
-              let gallerySource: Blob
-              if (image.file) {
-                gallerySource = image.file
-              } else {
-                const response = await fetch(image.src)
-                gallerySource = await response.blob()
-              }
-              await upsertAsset(image.id, gallerySource)
-              return {
-                id: image.id,
-                name: image.name,
-                type: image.file?.type ?? gallerySource.type ?? undefined,
-              } satisfies StoredImageMeta
-            } catch (error) {
-              console.error('保存相册图片失败', error)
-              return {
-                id: image.id,
-                name: image.name,
-                type: image.file?.type,
-              } satisfies StoredImageMeta
-            }
-          }),
-        )
-        galleryMetas.push(...galleryResults.filter(Boolean))
-      }
+      // 相册图片已经在上传时保存，只需记录元数据
+      const galleryMetas: StoredImageMeta[] = galleryImages
+        .filter((img) => img.uploaded)
+        .map((image) => {
+          keepIds.add(image.id)
+          return {
+            id: image.id,
+            name: image.name,
+            type: image.file?.type,
+          }
+        })
 
       let musicMeta: StoredMusicMeta
       const isPresetTrack = PRESET_TRACKS.some((preset) => preset.id === musicTrack.id)
@@ -594,32 +648,13 @@ function App() {
         }
       } else {
         keepIds.add(musicTrack.id)
-        try {
-          let audioSource: Blob
-          if (musicTrack.file) {
-            audioSource = musicTrack.file
-          } else {
-            const response = await fetch(musicTrack.src)
-            audioSource = await response.blob()
-          }
-          await upsertAsset(musicTrack.id, audioSource)
-          musicMeta = {
-            mode: 'custom',
-            id: musicTrack.id,
-            name: musicTrack.name,
-            credit: musicTrack.credit,
-            src: musicTrack.src,
-            type: musicTrack.file?.type ?? audioSource.type ?? undefined,
-          }
-        } catch (error) {
-          console.error('保存自定义音乐失败', error)
-          musicMeta = {
-            mode: 'custom',
-            id: musicTrack.id,
-            name: musicTrack.name,
-            credit: musicTrack.credit,
-            src: musicTrack.src,
-          }
+        musicMeta = {
+          mode: 'custom',
+          id: musicTrack.id,
+          name: musicTrack.name,
+          credit: musicTrack.credit,
+          src: musicTrack.src,
+          type: musicTrack.file?.type,
         }
       }
 
@@ -1151,8 +1186,18 @@ function App() {
                 <p className="text-xs text-slate-500">推荐尺寸 1600x900，支持 JPG / PNG / WebP</p>
               </div>
               {heroImage && (
-                <div className="overflow-hidden rounded-2xl border border-slate-200">
+                <div className="overflow-hidden rounded-2xl border border-slate-200 relative">
                   <img src={heroImage.src} alt={heroImage.name} className="h-40 w-full object-cover sm:h-56" />
+                  {heroImage.uploading && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+                      <div className="text-white text-sm font-medium">上传中...</div>
+                    </div>
+                  )}
+                  {heroImage.error && (
+                    <div className="absolute top-2 right-2 bg-red-500 text-white text-xs px-2 py-1 rounded">
+                      {heroImage.error}
+                    </div>
+                  )}
                   <button
                     type="button"
                     onClick={resetHeroImage}
@@ -1183,13 +1228,25 @@ function App() {
                   {galleryImages.map((image) => (
                     <figure key={image.id} className="group relative overflow-hidden rounded-xl">
                       <img src={image.src} alt={image.name} className="h-24 w-full object-cover sm:h-28" />
-                      <button
-                        type="button"
-                        onClick={() => removeGalleryImage(image.id)}
-                        className="absolute inset-0 flex items-center justify-center bg-black/40 text-xs font-semibold text-white opacity-0 transition group-hover:opacity-100"
-                      >
-                        移除
-                      </button>
+                      {image.uploading && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+                          <div className="text-white text-xs font-medium">上传中</div>
+                        </div>
+                      )}
+                      {image.error && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-red-500/80">
+                          <div className="text-white text-xs font-medium">{image.error}</div>
+                        </div>
+                      )}
+                      {!image.uploading && !image.error && (
+                        <button
+                          type="button"
+                          onClick={() => removeGalleryImage(image.id)}
+                          className="absolute inset-0 flex items-center justify-center bg-black/40 text-xs font-semibold text-white opacity-0 transition group-hover:opacity-100"
+                        >
+                          移除
+                        </button>
+                      )}
                     </figure>
                   ))}
                 </div>
