@@ -359,7 +359,18 @@ function App() {
       const API_BASE = import.meta.env.VITE_API_BASE?.replace(/\/$/, '') ?? ''
       const serverUrl = `${API_BASE}/uploads/${tempId}`
 
-      // 上传成功，更新为服务器URL
+      // 验证文件是否真实存储成功
+      try {
+        const verifyResponse = await fetch(serverUrl, { method: 'HEAD' })
+        if (!verifyResponse.ok) {
+          throw new Error('文件验证失败')
+        }
+      } catch (verifyError) {
+        console.error('文件验证失败', verifyError)
+        throw new Error('上传后验证失败，请重试')
+      }
+
+      // 上传并验证成功，更新为服务器URL
       setHeroImage((prev) => {
         if (prev?.id === tempId) {
           URL.revokeObjectURL(tempSrc)
@@ -380,7 +391,7 @@ function App() {
           return {
             ...prev,
             uploading: false,
-            error: '上传失败，请重试',
+            error: error instanceof Error ? error.message : '上传失败，请重试',
           }
         }
         return prev
@@ -414,7 +425,18 @@ function App() {
           await upsertAsset(item.id, item.file)
           const serverUrl = `${API_BASE}/uploads/${item.id}`
 
-          // 上传成功，更新为服务器URL
+          // 验证文件是否真实存储成功
+          try {
+            const verifyResponse = await fetch(serverUrl, { method: 'HEAD' })
+            if (!verifyResponse.ok) {
+              throw new Error('验证失败')
+            }
+          } catch (verifyError) {
+            console.error('文件验证失败', verifyError)
+            throw new Error('验证失败')
+          }
+
+          // 上传并验证成功，更新为服务器URL
           setGalleryImages((prev) =>
             prev.map((img) => {
               if (img.id === item.id) {
@@ -438,7 +460,7 @@ function App() {
                 return {
                   ...img,
                   uploading: false,
-                  error: '上传失败',
+                  error: error instanceof Error ? error.message : '上传失败',
                 }
               }
               return img
@@ -892,7 +914,7 @@ function App() {
                       type="button"
                       onClick={togglePlayback}
                       className={clsx(
-                        'inline-flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-blush-500 to-sage-500 text-white shadow-lg transition hover:opacity-90',
+                        'inline-flex h-11 w-11 items-center justify-center rounded bg-gradient-to-br from-blush-500 to-sage-500 text-white shadow-lg transition hover:opacity-90',
                         isMusicPlaying && 'ring-2 ring-offset-2 ring-offset-white/0 ring-sage-300',
                       )}
                     >
@@ -1354,7 +1376,7 @@ function App() {
                     type="button"
                     onClick={togglePlayback}
                     className={clsx(
-                      'inline-flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-blush-500 to-sage-500 text-white shadow-lg transition hover:opacity-90',
+                      'inline-flex h-10 w-10 items-center justify-center rounded bg-gradient-to-br from-blush-500 to-sage-500 text-white shadow-lg transition hover:opacity-90',
                       isMusicPlaying && 'ring-2 ring-offset-2 ring-offset-white/0 ring-sage-300',
                     )}
                   >
