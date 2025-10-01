@@ -1,35 +1,9 @@
 import type { Coordinates, InvitationDetails } from '../types/invitation'
+import { fetchInvitation, saveInvitation, uploadAsset, type ServerInvitation } from '../api/invitation'
 
-const STATE_STORAGE_KEY = 'linkwed-state.v1'
-const DB_NAME = 'linkwed-storage'
-const DB_VERSION = 1
-const ASSET_STORE = 'assets'
+const API_BASE = import.meta.env.VITE_API_BASE?.replace(/\/$/, '') ?? ''
 
-const isIndexedDBSupported = typeof indexedDB !== 'undefined'
-
-let databasePromise: Promise<IDBDatabase> | null = null
-
-const getDatabase = () => {
-  if (!isIndexedDBSupported) {
-    return Promise.reject(new Error('IndexedDB is not supported in this environment.'))
-  }
-
-  if (!databasePromise) {
-    databasePromise = new Promise((resolve, reject) => {
-      const request = indexedDB.open(DB_NAME, DB_VERSION)
-      request.onupgradeneeded = () => {
-        const db = request.result
-        if (!db.objectStoreNames.contains(ASSET_STORE)) {
-          db.createObjectStore(ASSET_STORE)
-        }
-      }
-      request.onsuccess = () => resolve(request.result)
-      request.onerror = () => reject(request.error ?? new Error('Failed to open IndexedDB'))
-    })
-  }
-
-  return databasePromise
-}
+const assetUrl = (id: string) => `${API_BASE}/uploads/${id}`
 
 export interface StoredImageMeta {
   id: string
@@ -43,6 +17,7 @@ export interface StoredMusicMeta {
   name: string
   credit?: string
   type?: string
+  src?: string
 }
 
 export interface StoredState {
@@ -55,100 +30,124 @@ export interface StoredState {
   volume: number
 }
 
-interface PersistedPayload {
-  version: number
-  state: StoredState
-}
-
-export const saveSnapshot = (state: StoredState) => {
+export const saveSnapshot = async (state: StoredState) => {
   try {
-    const payload: PersistedPayload = { version: 1, state }
-    localStorage.setItem(STATE_STORAGE_KEY, JSON.stringify(payload))
+    const payload: ServerInvitation = {
+      details: state.details,
+      coordinates: state.coordinates,
+      locationQuery: state.locationQuery,
+      heroImage: state.heroImage
+        ? {
+            id: state.heroImage.id,
+            name: state.heroImage.name,
+            url: assetUrl(state.heroImage.id),
+            type: state.heroImage.type,
+          }
+        : null,
+      galleryImages: state.galleryImages.map((meta) => ({
+        id: meta.id,
+        name: meta.name,
+        url: assetUrl(meta.id),
+        type: meta.type,
+      })),
+      music:
+        state.music.mode === 'preset'
+          ? {
+              id: state.music.id,
+              name: state.music.name,
+              src: state.music.src ?? '',
+              isDefault: true,
+              credit: state.music.credit,
+            }
+          : {
+              id: state.music.id,
+              name: state.music.name,
+              src: assetUrl(state.music.id),
+              isDefault: false,
+              credit: state.music.credit,
+            },
+      volume: state.volume,
+    }
+
+    await saveInvitation(payload)
   } catch (error) {
-    console.error('保存状态到本地失败', error)
+    console.error('保存邀请数据失败', error)
   }
 }
 
-export const loadSnapshot = (): StoredState | null => {
+export const loadSnapshot = async (): Promise<StoredState | null> => {
   try {
-    const raw = localStorage.getItem(STATE_STORAGE_KEY)
-    if (!raw) return null
-    const payload = JSON.parse(raw) as PersistedPayload
-    if (typeof payload !== 'object' || payload === null) return null
-    if (payload.version !== 1 || typeof payload.state !== 'object' || payload.state === null) {
-      return null
+    const snapshot = await fetchInvitation()
+    const details = snapshot.details as InvitationDetails | undefined
+    const coordinates = snapshot.coordinates as Coordinates | undefined
+
+    return {
+      details: details ?? ({} as InvitationDetails),
+      coordinates: coordinates ?? ({ lat: 0, lng: 0 } as Coordinates),
+      locationQuery: snapshot.locationQuery ?? '',
+      heroImage: snapshot.heroImage
+        ? {
+            id: snapshot.heroImage.id,
+            name: snapshot.heroImage.name,
+            type: snapshot.heroImage.type,
+          }
+        : undefined,
+      galleryImages: Array.isArray(snapshot.galleryImages)
+        ? snapshot.galleryImages.map((asset) => ({
+            id: asset.id,
+            name: asset.name,
+            type: asset.type,
+          }))
+        : [],
+      music: snapshot.music
+        ? {
+            mode: snapshot.music.isDefault ? 'preset' : 'custom',
+            id: snapshot.music.id,
+            name: snapshot.music.name,
+            credit: snapshot.music.credit,
+            type: (snapshot.music as any).type,
+            src: snapshot.music.src,
+          }
+        : {
+            mode: 'preset',
+            id: 'default',
+            name: '浪漫花海（默认循环）',
+            credit: 'LinkWed 内置音频循环',
+            src: '/media/background.wav',
+          },
+      volume: typeof snapshot.volume === 'number' ? snapshot.volume : 0.6,
     }
-    const { state } = payload
-    if (!state.galleryImages) state.galleryImages = []
-    return state
   } catch (error) {
-    console.error('读取本地状态失败', error)
+    console.error('读取邀请数据失败', error)
     return null
   }
 }
 
 export const clearSnapshot = () => {
-  localStorage.removeItem(STATE_STORAGE_KEY)
+  // no-op for server persistence
 }
 
 export const upsertAsset = async (id: string, blob: Blob) => {
-  if (!isIndexedDBSupported) return
-  const db = await getDatabase()
-  await new Promise<void>((resolve, reject) => {
-    const transaction = db.transaction(ASSET_STORE, 'readwrite')
-    transaction.oncomplete = () => resolve()
-    transaction.onerror = () => reject(transaction.error ?? new Error('IndexedDB put failed'))
-    transaction.objectStore(ASSET_STORE).put(blob, id)
-  })
+  try {
+    const file = blob instanceof File ? blob : new File([blob], id, { type: blob.type || 'application/octet-stream' })
+    const kind: 'image' | 'audio' = (file.type || '').startsWith('audio') ? 'audio' : 'image'
+    await uploadAsset(file, kind, id)
+  } catch (error) {
+    console.error('上传资源失败', error)
+  }
 }
 
 export const fetchAsset = async (id: string): Promise<Blob | undefined> => {
-  if (!isIndexedDBSupported) return undefined
   try {
-    const db = await getDatabase()
-    return await new Promise<Blob | undefined>((resolve, reject) => {
-      const transaction = db.transaction(ASSET_STORE, 'readonly')
-      transaction.onerror = () => reject(transaction.error ?? new Error('IndexedDB get failed'))
-      const request = transaction.objectStore(ASSET_STORE).get(id)
-      request.onsuccess = () => resolve(request.result ?? undefined)
-      request.onerror = () => reject(request.error ?? new Error('IndexedDB get failed'))
-    })
+    const response = await fetch(assetUrl(id))
+    if (!response.ok) return undefined
+    return await response.blob()
   } catch (error) {
     console.error('读取资源失败', error)
     return undefined
   }
 }
 
-export const removeUnusedAssets = async (keepIds: Iterable<string>) => {
-  if (!isIndexedDBSupported) return
-  try {
-    const keep = new Set(keepIds)
-    const db = await getDatabase()
-    const keys = await new Promise<IDBValidKey[]>((resolve, reject) => {
-      const transaction = db.transaction(ASSET_STORE, 'readonly')
-      transaction.onerror = () => reject(transaction.error ?? new Error('IndexedDB getAllKeys failed'))
-      const request = transaction.objectStore(ASSET_STORE).getAllKeys()
-      request.onsuccess = () => resolve((request.result as IDBValidKey[]) ?? [])
-      request.onerror = () => reject(request.error ?? new Error('IndexedDB getAllKeys failed'))
-    })
-    const removals = keys.filter((key) => !keep.has(String(key)))
-
-    if (!removals.length) return
-
-    await Promise.all(
-      removals.map(
-        (key) =>
-          new Promise<void>((resolve, reject) => {
-            const transaction = db.transaction(ASSET_STORE, 'readwrite')
-            transaction.oncomplete = () => resolve()
-            transaction.onerror = () => reject(transaction.error ?? new Error('IndexedDB delete failed'))
-            transaction.objectStore(ASSET_STORE).delete(key)
-          }).catch((error) => {
-            console.error('删除旧资源失败', error)
-          }),
-      ),
-    )
-  } catch (error) {
-    console.error('清理资源失败', error)
-  }
+export const removeUnusedAssets = async (_keepIds: Iterable<string>) => {
+  // no-op;服务端暂不清理历史资源
 }

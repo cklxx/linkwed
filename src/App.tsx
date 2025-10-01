@@ -196,7 +196,7 @@ function App() {
     let cancelled = false
 
     const hydrateFromStorage = async () => {
-      const snapshot = loadSnapshot()
+      const snapshot = await loadSnapshot()
       if (!snapshot) {
         hasHydratedRef.current = true
         return
@@ -593,6 +593,7 @@ function App() {
         id: musicTrack.id,
         name: musicTrack.name,
         credit: musicTrack.credit,
+        src: musicTrack.src,
       }
     } else {
       keepIds.add(musicTrack.id)
@@ -610,6 +611,7 @@ function App() {
           id: musicTrack.id,
           name: musicTrack.name,
           credit: musicTrack.credit,
+          src: musicTrack.src,
           type: musicTrack.file?.type ?? audioSource.type ?? undefined,
         }
       } catch (error) {
@@ -619,6 +621,7 @@ function App() {
           id: musicTrack.id,
           name: musicTrack.name,
           credit: musicTrack.credit,
+          src: musicTrack.src,
         }
       }
     }

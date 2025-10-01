@@ -26,12 +26,12 @@ if command -v docker >/dev/null 2>&1; then
   docker run -d --name "$APP_NAME" -p "${PORT}:80" "$APP_NAME"
   echo "✅ Deployment complete! Visit http://localhost:${PORT}"
 else
-  PORT="${PORT:-$DEFAULT_PREVIEW_PORT}"
-  echo "ℹ️  Docker not available — falling back to local preview server."
+  PORT="${PORT:-3000}"
+  echo "ℹ️  Docker not available — falling back to Node 服务器。"
   echo "📦 Installing dependencies..."
   npm install
   echo "🏗️ Building production bundle..."
   npm run build
   echo "🎧 Serving on http://0.0.0.0:${PORT} (press Ctrl+C to stop)"
-  npm run preview -- --host 0.0.0.0 --port "${PORT}"
+  PORT="${PORT}" npm run server
 fi
