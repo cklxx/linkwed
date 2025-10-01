@@ -223,17 +223,14 @@ function App() {
 
         let restoredHero: UploadedImage | null = null
         if (snapshot.heroImage) {
-          const heroBlob = await fetchAsset(snapshot.heroImage.id)
-          if (heroBlob && !cancelled) {
-            const heroFile = new File([heroBlob], snapshot.heroImage.name, {
-              type: snapshot.heroImage.type ?? heroBlob.type ?? 'image/*',
-            })
-            restoredHero = {
-              id: snapshot.heroImage.id,
-              name: snapshot.heroImage.name,
-              src: URL.createObjectURL(heroFile),
-              file: heroFile,
-            }
+          const API_BASE = import.meta.env.VITE_API_BASE?.replace(/\/$/, '') ?? ''
+          const serverUrl = `${API_BASE}/uploads/${snapshot.heroImage.id}`
+
+          restoredHero = {
+            id: snapshot.heroImage.id,
+            name: snapshot.heroImage.name,
+            src: serverUrl,
+            file: undefined,
           }
         }
         if (!cancelled && restoredHero) {
@@ -241,21 +238,14 @@ function App() {
         }
 
         if (snapshot.galleryImages?.length) {
-          const restoredGallery: UploadedImage[] = []
-          for (const meta of snapshot.galleryImages) {
-            if (cancelled) break
-            const imageBlob = await fetchAsset(meta.id)
-            if (!imageBlob) continue
-            const imageFile = new File([imageBlob], meta.name, {
-              type: meta.type ?? imageBlob.type ?? 'image/*',
-            })
-            restoredGallery.push({
-              id: meta.id,
-              name: meta.name,
-              src: URL.createObjectURL(imageFile),
-              file: imageFile,
-            })
-          }
+          const API_BASE = import.meta.env.VITE_API_BASE?.replace(/\/$/, '') ?? ''
+          const restoredGallery: UploadedImage[] = snapshot.galleryImages.map((meta) => ({
+            id: meta.id,
+            name: meta.name,
+            src: `${API_BASE}/uploads/${meta.id}`,
+            file: undefined,
+          }))
+
           if (!cancelled) {
             setGalleryImages(restoredGallery)
           }
@@ -269,24 +259,18 @@ function App() {
           nextTrack = preset ? { ...preset } : { ...DEFAULT_TRACK }
           previousMusicUrl.current = null
         } else if (musicMeta?.mode === 'custom') {
-          const musicBlob = await fetchAsset(musicMeta.id)
-          if (musicBlob) {
-            const audioFile = new File([musicBlob], musicMeta.name, {
-              type: musicMeta.type ?? musicBlob.type ?? 'audio/mpeg',
-            })
-            const src = URL.createObjectURL(audioFile)
-            nextTrack = {
-              id: musicMeta.id,
-              name: musicMeta.name,
-              src,
-              isDefault: false,
-              credit: musicMeta.credit,
-              file: audioFile,
-            }
-            previousMusicUrl.current = src
-          } else {
-            previousMusicUrl.current = null
+          const API_BASE = import.meta.env.VITE_API_BASE?.replace(/\/$/, '') ?? ''
+          const serverUrl = `${API_BASE}/uploads/${musicMeta.id}`
+
+          nextTrack = {
+            id: musicMeta.id,
+            name: musicMeta.name,
+            src: serverUrl,
+            isDefault: false,
+            credit: musicMeta.credit,
+            file: undefined,
           }
+          previousMusicUrl.current = null
         }
 
         if (!cancelled) {
