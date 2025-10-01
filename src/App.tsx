@@ -914,7 +914,7 @@ function App() {
                       type="button"
                       onClick={togglePlayback}
                       className={clsx(
-                        'inline-flex h-11 w-11 items-center justify-center rounded bg-gradient-to-br from-blush-500 to-sage-500 text-white shadow-lg transition hover:opacity-90',
+                        'inline-flex h-11 w-11 items-center justify-center bg-gradient-to-br from-blush-500 to-sage-500 text-white shadow-lg transition hover:opacity-90',
                         isMusicPlaying && 'ring-2 ring-offset-2 ring-offset-white/0 ring-sage-300',
                       )}
                     >
@@ -1376,7 +1376,7 @@ function App() {
                     type="button"
                     onClick={togglePlayback}
                     className={clsx(
-                      'inline-flex h-10 w-10 items-center justify-center rounded bg-gradient-to-br from-blush-500 to-sage-500 text-white shadow-lg transition hover:opacity-90',
+                      'inline-flex h-10 w-10 items-center justify-center bg-gradient-to-br from-blush-500 to-sage-500 text-white shadow-lg transition hover:opacity-90',
                       isMusicPlaying && 'ring-2 ring-offset-2 ring-offset-white/0 ring-sage-300',
                     )}
                   >
