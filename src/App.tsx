@@ -783,12 +783,12 @@ function App() {
       <main className="mx-auto mt-8 w-full max-w-5xl px-4 sm:mt-12 sm:px-6">
         {isPreviewPage ? (
           <motion.section
-            className="space-y-10 rounded-[40px] border border-white/40 bg-white/80 p-6 shadow-invitation backdrop-blur sm:p-10"
+            className="space-y-10"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
           >
-            <div className="relative overflow-hidden rounded-[36px] border border-white/70 bg-slate-950/70">
+            <div className="relative overflow-hidden rounded-3xl">
               {heroImage ? (
                 <img src={heroImage.src} alt={heroImage.name} className="h-80 w-full object-cover sm:h-[420px]" />
               ) : (
@@ -806,8 +806,8 @@ function App() {
             </div>
 
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-              <div className="space-y-5 rounded-3xl border border-white/70 bg-white/90 p-6 shadow-md">
-                <div className="flex items-center gap-3 rounded-2xl bg-slate-50/90 p-4">
+              <div className="space-y-5 bg-white/90 p-6 rounded-2xl">
+                <div className="flex items-center gap-3 bg-slate-50/50 p-4 rounded-xl">
                   <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-blush-500 to-sage-500 text-white shadow">
                     <Calendar className="h-5 w-5" />
                   </div>
@@ -817,7 +817,7 @@ function App() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3 rounded-2xl bg-slate-50/90 p-4">
+                <div className="flex items-center gap-3 bg-slate-50/50 p-4 rounded-xl">
                   <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-sage-500 to-slate-700 text-white shadow">
                     <Clock className="h-5 w-5" />
                   </div>
@@ -827,7 +827,7 @@ function App() {
                   </div>
                 </div>
 
-                <div className="flex items-start gap-3 rounded-2xl bg-slate-50/90 p-4">
+                <div className="flex items-start gap-3 bg-slate-50/50 p-4 rounded-xl">
                   <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-slate-900 to-slate-700 text-white shadow">
                     <LocateFixed className="h-5 w-5" />
                   </div>
@@ -838,15 +838,15 @@ function App() {
                   </div>
                 </div>
 
-                <div className="rounded-2xl bg-slate-50/90 p-4 text-center">
+                <div className="bg-slate-50/50 p-4 rounded-xl text-center">
                   <p className="text-base font-semibold text-slate-900">{details.hashtag}</p>
                   <p className="text-xs uppercase tracking-[0.35em] text-slate-400">欢迎用话题标签记录瞬间</p>
                 </div>
               </div>
 
               <div className="space-y-6">
-                <div className="overflow-hidden rounded-3xl border border-white/70 bg-white/90 shadow">
-                  <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
+                <div className="overflow-hidden rounded-2xl bg-white/90">
+                  <div className="flex items-center justify-between px-6 py-4">
                     <div>
                       <h3 className="text-sm font-semibold text-slate-900">背景音乐</h3>
                       <p className="text-xs text-slate-500">{musicTrack.name}</p>
@@ -881,7 +881,7 @@ function App() {
                   </div>
                 </div>
 
-                <div className="rounded-3xl border border-white/70 bg-white/90 p-6 shadow">
+                <div className="rounded-2xl bg-white/90 p-6">
                   <div className="flex items-center gap-3">
                     <MapPin className="h-5 w-5 text-sage-500" />
                     <div>
@@ -889,7 +889,7 @@ function App() {
                       <p className="text-xs text-slate-500">{details.venue} · {details.address}</p>
                     </div>
                   </div>
-                  <div className="mt-4 overflow-hidden rounded-2xl">
+                  <div className="mt-4 overflow-hidden rounded-xl">
                     <Suspense
                       fallback={
                         <div
@@ -907,12 +907,12 @@ function App() {
               </div>
             </div>
 
-            <div className="space-y-6 rounded-3xl border border-white/70 bg-white/90 p-6 shadow">
+            <div className="space-y-6 bg-white/90 p-6 rounded-2xl">
               <div>
                 <h3 className="text-sm font-semibold text-slate-900 sm:text-base">当日流程</h3>
                 <ul className="mt-3 space-y-3 sm:mt-4 sm:space-y-4">
                   {details.schedule.map((item) => (
-                    <li key={`${item.time}-${item.label}`} className="rounded-2xl bg-white/90 p-4 shadow-sm">
+                    <li key={`${item.time}-${item.label}`} className="bg-slate-50/50 p-4 rounded-xl">
                       <p className="text-[10px] uppercase tracking-[0.3em] text-sage-500 sm:text-xs">{item.time}</p>
                       <p className="mt-1 text-sm font-medium text-slate-900">{item.label}</p>
                       <p className="mt-1 text-xs text-slate-500 sm:text-sm">{item.description}</p>
@@ -939,7 +939,7 @@ function App() {
                         )}
                       >
                         <motion.div
-                          className={clsx('relative overflow-hidden rounded-3xl shadow-2xl', isEven ? 'lg:col-start-1' : 'lg:col-start-2')}
+                          className={clsx('relative overflow-hidden rounded-2xl', isEven ? 'lg:col-start-1' : 'lg:col-start-2')}
                           whileHover={{ scale: 1.02 }}
                           transition={{ duration: 0.3 }}
                         >
@@ -1003,7 +1003,7 @@ function App() {
                 </div>
               )}
 
-              <div className="rounded-3xl border border-slate-100 bg-white/90 p-6 text-center">
+              <div className="bg-white/90 p-6 rounded-2xl text-center">
                 <p className="text-sm font-medium text-slate-900 sm:text-base">{details.customMessage}</p>
                 <a
                   href={details.rsvpLink}
@@ -1016,7 +1016,7 @@ function App() {
           </motion.section>
         ) : (
           <motion.section
-            className="space-y-8 rounded-[40px] border border-white/50 bg-white/85 p-6 shadow-invitation backdrop-blur sm:p-8"
+            className="space-y-8"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
@@ -1109,12 +1109,12 @@ function App() {
               </div>
             </section>
 
-            <section className="rounded-3xl border border-dashed border-slate-200 p-4">
+            <section className="bg-white/90 p-4 rounded-2xl">
               <h3 className="text-xs font-semibold text-slate-900 sm:text-sm">当天流程</h3>
               <p className="mt-1 text-[11px] text-slate-500 sm:text-xs">调整时间、环节与备注说明。</p>
               <div className="mt-4 space-y-4">
                 {details.schedule.map((item, index) => (
-                  <div key={item.label + index} className="rounded-2xl bg-white/90 p-3 shadow-sm">
+                  <div key={item.label + index} className="bg-slate-50/50 p-3 rounded-xl">
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                       <input
                         value={item.time}
@@ -1140,10 +1140,10 @@ function App() {
               </div>
             </section>
 
-            <section className="space-y-4 rounded-3xl border border-white/70 bg-white/90 p-4 shadow">
+            <section className="space-y-4 bg-white/90 p-4 rounded-2xl">
               <h3 className="text-sm font-semibold text-slate-900">封面照片</h3>
               <div
-                {...getHeroRootProps({ className: 'relative flex h-48 cursor-pointer flex-col items-center justify-center gap-3 rounded-3xl border border-dashed border-slate-300 bg-slate-50/70 p-6 text-center transition hover:border-blush-300 sm:h-64' })}
+                {...getHeroRootProps({ className: 'relative flex h-48 cursor-pointer flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-slate-300 bg-slate-50/70 p-6 text-center transition hover:border-blush-300 sm:h-64' })}
               >
                 <input {...getHeroInputProps()} />
                 <ImagePlus className="h-6 w-6 text-slate-500" />
@@ -1151,7 +1151,7 @@ function App() {
                 <p className="text-xs text-slate-500">推荐尺寸 1600x900，支持 JPG / PNG / WebP</p>
               </div>
               {heroImage && (
-                <div className="overflow-hidden rounded-3xl border border-slate-200">
+                <div className="overflow-hidden rounded-2xl border border-slate-200">
                   <img src={heroImage.src} alt={heroImage.name} className="h-40 w-full object-cover sm:h-56" />
                   <button
                     type="button"
@@ -1164,13 +1164,13 @@ function App() {
               )}
             </section>
 
-            <section className="space-y-4 rounded-3xl border border-white/70 bg-white/90 p-4 shadow">
+            <section className="space-y-4 bg-white/90 p-4 rounded-2xl">
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-semibold text-slate-900">相册照片</h3>
                 <p className="text-xs text-slate-500">最多 6 张，支持拖拽上传</p>
               </div>
               <div
-                {...getGalleryRootProps({ className: 'flex min-h-[140px] cursor-pointer items-center justify-center gap-3 rounded-3xl border border-dashed border-slate-300 bg-slate-50/70 p-6 text-center transition hover:border-sage-300' })}
+                {...getGalleryRootProps({ className: 'flex min-h-[140px] cursor-pointer items-center justify-center gap-3 rounded-2xl border border-dashed border-slate-300 bg-slate-50/70 p-6 text-center transition hover:border-sage-300' })}
               >
                 <input {...getGalleryInputProps()} />
                 <ImagePlus className="h-5 w-5 text-slate-500" />
@@ -1196,7 +1196,7 @@ function App() {
               )}
             </section>
 
-            <section className="space-y-4 rounded-3xl border border-white/70 bg-white/90 p-4 shadow">
+            <section className="space-y-4 bg-white/90 p-4 rounded-2xl">
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-semibold text-slate-900">会场位置</h3>
                 <p className="text-xs text-slate-500">搜索并选择会场地址</p>
@@ -1250,7 +1250,7 @@ function App() {
               </div>
             </section>
 
-            <section className="space-y-4 rounded-3xl border border-white/70 bg-white/90 p-4 shadow">
+            <section className="space-y-4 bg-white/90 p-4 rounded-2xl">
               <h3 className="text-sm font-semibold text-slate-900">背景音乐</h3>
               <p className="text-xs text-slate-500">设置典礼氛围音乐，可自定义上传。</p>
 
