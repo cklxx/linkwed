@@ -29,7 +29,6 @@ import type {
   UploadedImage,
 } from './types/invitation'
 import {
-  fetchAsset,
   loadSnapshot,
   removeUnusedAssets,
   saveSnapshot,
