@@ -57,6 +57,6 @@ npm run dev
 npm run build
 npm run preview
 ```
-或使用仓库内的 `deploy.sh` 进行 Docker 构建与 Nginx 托管（默认端口 4173，可通过 `PORT=8080 ./deploy.sh` 覆盖）。
+或使用仓库内的 `deploy.sh` 进行 Docker 构建与 Nginx 托管（Docker 默认映射宿主机 80 端口，因此部署后可直接使用 IP 访问；若需调整可通过 `PORT=8080 ./deploy.sh` 覆盖。无 Docker 时脚本会启用 Vite Preview，默认端口 4173）。
 
 祝使用顺利，创作一封独一无二的婚礼请柬！💍
