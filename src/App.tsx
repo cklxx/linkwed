@@ -356,9 +356,9 @@ function App() {
 
     // 立即上传到服务器
     try {
-      await upsertAsset(tempId, file)
+      const actualId = await upsertAsset(tempId, file) // 获取服务器实际保存的ID
       const API_BASE = import.meta.env.VITE_API_BASE?.replace(/\/$/, '') ?? ''
-      const serverUrl = `${API_BASE}/uploads/${tempId}`
+      const serverUrl = `${API_BASE}/uploads/${actualId}`
 
       // 验证文件是否真实存储成功（带重试机制）
       let verified = false
@@ -386,7 +386,8 @@ function App() {
         if (prev?.id === tempId) {
           URL.revokeObjectURL(tempSrc)
           return {
-            ...prev,
+            id: actualId, // 使用服务器返回的实际ID
+            name: prev.name,
             src: serverUrl,
             uploading: false,
             uploaded: true,
@@ -436,8 +437,8 @@ function App() {
     await Promise.allSettled(
       filesToUpload.map(async (item) => {
         try {
-          await upsertAsset(item.id, item.file)
-          const serverUrl = `${API_BASE}/uploads/${item.id}`
+          const actualId = await upsertAsset(item.id, item.file) // 获取服务器实际保存的ID
+          const serverUrl = `${API_BASE}/uploads/${actualId}`
 
           // 验证文件是否真实存储成功（带重试机制）
           let verified = false
@@ -466,7 +467,8 @@ function App() {
               if (img.id === item.id) {
                 URL.revokeObjectURL(item.src)
                 return {
-                  ...img,
+                  id: actualId, // 使用服务器返回的实际ID
+                  name: img.name,
                   src: serverUrl,
                   uploading: false,
                   uploaded: true,

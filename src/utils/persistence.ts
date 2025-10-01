@@ -127,13 +127,15 @@ export const clearSnapshot = () => {
   // no-op for server persistence
 }
 
-export const upsertAsset = async (id: string, blob: Blob) => {
+export const upsertAsset = async (id: string, blob: Blob): Promise<string> => {
   try {
     const file = blob instanceof File ? blob : new File([blob], id, { type: blob.type || 'application/octet-stream' })
     const kind: 'image' | 'audio' = (file.type || '').startsWith('audio') ? 'audio' : 'image'
-    await uploadAsset(file, kind, id)
+    const result = await uploadAsset(file, kind, id)
+    return result.id // 返回服务器实际保存的文件ID
   } catch (error) {
     console.error('上传资源失败', error)
+    throw error
   }
 }
 
