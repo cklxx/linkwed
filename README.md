@@ -1,63 +1,61 @@
-# LinkWed · Digital Wedding Invitation
+# LinkWed · 数字婚礼请柬
 
-LinkWed is a modern, highly visual wedding invitation experience. It blends personalised photography, an interactive map, and ambient music to help couples share their celebration in a single shareable web link.
+LinkWed 是一款面向中国用户的数字婚礼请柬模板，支持移动端优先的编辑与预览、相册上传、背景音乐自选以及高德地图位置展示，让新人能够快速生成可分享的浪漫请柬。
 
-## Highlights
-- 🌸 **Editorial invitation canvas** — live preview while editing names, timings, story, and RSVP message.
-- 📸 **Photo storytelling** — upload a hero portrait plus up to six gallery memories; instant previews with graceful fallbacks.
-- 📍 **Interactive venue map** — search any location via OpenStreetMap (Nominatim) and drop a marker with live address sync.
-- 🎼 **Atmospheric soundtrack** — built-in ambient loop with the option to upload custom audio and control playback volume.
-- 📱 **Mobile-first flow** — phone-sized tab switcher, sticky quick actions, and touch-friendly layout tweaks.
-- ⚙️ **One-click deployment** — `deploy.sh` auto-detects Docker for production builds, with a local preview fallback.
+## 功能亮点
+- 📱 **双页面体验**：编辑页与预览页通过底部导航切换，手机上也能顺滑操作，修改实时生效。
+- 📸 **图片故事**：支持封面图与最多 6 张相册照片，拖拽上传即可生成柔和的拼图布局。
+- 🎵 **婚礼音乐库**：默认循环音色外，内置 3 首 Bensound 婚礼钢琴曲，可随时试听或上传自定义音频。
+- 📍 **高德地图**：集成 JS API，支持地点搜索与点击选点，自动同步坐标与地址信息。
+- 🌸 **中文界面**：包含新人信息、日程安排、故事文案等模块，所有文案预设为中文风格，可直接修改。
 
-## Tech Stack
-- [Vite](https://vitejs.dev/) + React 19 + TypeScript
-- Tailwind CSS with custom blush & sage palette
-- Framer Motion for micro-interactions
-- React Leaflet + OpenStreetMap tiles for mapping
-- React Dropzone for fluid uploads
+## 技术栈
+- Vite + React 19 + TypeScript
+- Tailwind CSS + Framer Motion 动画
+- React Dropzone 文件拖拽上传
+- 高德地图 JavaScript API（通过 `@amap/amap-jsapi-loader` 动态加载）
 
-## Research Notes
-A quick survey of leading digital invitation platforms (Minted, Zola, Joy) and 2025 design showcases guided the direction:
-- Soft blush & sage palettes and serif/sans typography pairings remain dominant in luxury wedding trends.
-- Hero imagery with subtle overlays keeps focus on the couple while maintaining readability.
-- Interactive maps and ambient audio are frequently requested extras for destination weddings.
-These observations informed the final gradients, typography choices (`Playfair Display` + `Manrope`), and the modular layout with hero, schedule, and memory gallery sections.
+## 环境要求
+- Node.js ≥ 20.11（官方推荐 20.19+）
+- npm ≥ 10
+- 高德地图 Web 端 Key（必填）
 
-## Requirements
-- Node.js ≥ 20.19 (for Vite 7) and npm ≥ 10
-- Optional: Docker (for containerised deployment)
+> **环境变量**
+> - `VITE_AMAP_KEY`：高德地图 Web 端 Key（必填）。
+> - `VITE_AMAP_JS_CODE`：若密钥开启了安全校验，可配置 JS 安全码（可选）。
+> 将其写入项目根目录的 `.env` 或 `.env.local` 中，例如：
+> ```bash
+> VITE_AMAP_KEY=你的高德Key
+> VITE_AMAP_JS_CODE=可选的JS安全码
+> ```
 
-## Getting Started
+## 快速开始
 ```bash
 npm install
 npm run dev
 ```
-Then open `http://localhost:5173`.
+然后打开浏览器访问 `http://localhost:5173`。
 
-### Available Scripts
-- `npm run dev` — start the Vite dev server
-- `npm run build` — type-check and create a production bundle in `dist`
-- `npm run preview` — serve the production bundle locally
+### 常用脚本
+- `npm run dev`：本地开发环境
+- `npm run build`：类型检查 + 构建生产包
+- `npm run preview`：本地预览打包结果
 
-## Deployment
-After cloning the repository:
+## 使用指引
+- **基本信息**：编辑新人姓名、日期、时间、故事、回复方式等字段，右侧预览实时更新。
+- **相册管理**：封面图与相册均支持拖拽上传，鼠标悬停可一键移除。
+- **地图与地点**：输入关键词进行高德地点搜索，或直接在地图上点击选点；选中后坐标与地址会同步到请柬。
+- **音乐选择**：内置曲目显示署名说明，可随时切换或上传自定义音频，并支持音量及播放控制。
+
+## 音频版权
+- `background.wav`：LinkWed 内置循环音频，仅供演示。
+- `bensound-romantic.mp3`、`bensound-tenderness.mp3`、`bensound-love.mp3`：来自 [Bensound.com](https://www.bensound.com/)，免费授权需保留署名，仅限非商业用途。请在正式投放前确认授权范围。
+
+## 部署
 ```bash
-./deploy.sh
+npm run build
+npm run preview
 ```
-The script will:
-1. Use Docker to build & run an Nginx container serving the optimised bundle (port defaults to `4173`).
-2. Fall back to installing dependencies locally and running `vite preview` if Docker is unavailable.
+或使用仓库内的 `deploy.sh` 进行 Docker 构建与 Nginx 托管（默认端口 4173，可通过 `PORT=8080 ./deploy.sh` 覆盖）。
 
-Override the exposed port with `PORT=8080 ./deploy.sh`.
-
-## Feature Guide
-- **Photos** — drop a hero image (recommended 1800×1200) and up to six gallery shots. Hover to remove gallery items.
-- **Location** — search within the editor (OpenStreetMap). Selecting a result updates both the map marker and the invitation’s venue details, and the map chunk loads on demand for faster mobile start.
-- **Music** — a curated ambient loop ships in `public/media/background.wav`. Upload any `audio/*` file to replace it and control playback/volume from the panel.
-
-## Notes
-- The app calls the public Nominatim API for geocoding; heavy production traffic should proxy or cache requests per usage policy.
-- The production Docker image is built via a multi-stage Node → Nginx pipeline for minimal footprint.
-
-Enjoy crafting a beautiful wedding invite! 💍
+祝使用顺利，创作一封独一无二的婚礼请柬！💍
