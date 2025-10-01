@@ -360,15 +360,25 @@ function App() {
       const API_BASE = import.meta.env.VITE_API_BASE?.replace(/\/$/, '') ?? ''
       const serverUrl = `${API_BASE}/uploads/${tempId}`
 
-      // 验证文件是否真实存储成功
-      try {
-        const verifyResponse = await fetch(serverUrl, { method: 'HEAD' })
-        if (!verifyResponse.ok) {
-          throw new Error('文件验证失败')
+      // 验证文件是否真实存储成功（带重试机制）
+      let verified = false
+      for (let attempt = 0; attempt < 5; attempt++) {
+        try {
+          if (attempt > 0) {
+            await new Promise((resolve) => setTimeout(resolve, 200 * attempt)) // 200ms, 400ms, 600ms, 800ms
+          }
+          const verifyResponse = await fetch(serverUrl, { method: 'HEAD' })
+          if (verifyResponse.ok) {
+            verified = true
+            break
+          }
+        } catch (error) {
+          console.log(`验证尝试 ${attempt + 1}/5 失败`)
         }
-      } catch (verifyError) {
-        console.error('文件验证失败', verifyError)
-        throw new Error('上传后验证失败，请重试')
+      }
+
+      if (!verified) {
+        throw new Error('文件验证失败')
       }
 
       // 上传并验证成功，更新为服务器URL
@@ -429,14 +439,24 @@ function App() {
           await upsertAsset(item.id, item.file)
           const serverUrl = `${API_BASE}/uploads/${item.id}`
 
-          // 验证文件是否真实存储成功
-          try {
-            const verifyResponse = await fetch(serverUrl, { method: 'HEAD' })
-            if (!verifyResponse.ok) {
-              throw new Error('验证失败')
+          // 验证文件是否真实存储成功（带重试机制）
+          let verified = false
+          for (let attempt = 0; attempt < 5; attempt++) {
+            try {
+              if (attempt > 0) {
+                await new Promise((resolve) => setTimeout(resolve, 200 * attempt)) // 200ms, 400ms, 600ms, 800ms
+              }
+              const verifyResponse = await fetch(serverUrl, { method: 'HEAD' })
+              if (verifyResponse.ok) {
+                verified = true
+                break
+              }
+            } catch (error) {
+              console.log(`图片 ${item.name} 验证尝试 ${attempt + 1}/5 失败`)
             }
-          } catch (verifyError) {
-            console.error('文件验证失败', verifyError)
+          }
+
+          if (!verified) {
             throw new Error('验证失败')
           }
 
