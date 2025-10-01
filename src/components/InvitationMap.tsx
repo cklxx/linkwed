@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import AMapLoader from '@amap/amap-jsapi-loader'
 import type { Coordinates } from '../types/invitation'
+import { AMAP_KEY, AMAP_JS_CODE } from '../config/amap'
 
 declare global {
   interface Window {
@@ -33,13 +34,13 @@ const InvitationMap = ({ coordinates, venue, address, height, interactive = fals
     let disposed = false
 
     const bootstrap = async () => {
-      const key = import.meta.env.VITE_AMAP_KEY
+      const key = AMAP_KEY
       if (!key) {
         setError('请在环境变量中配置 VITE_AMAP_KEY 以加载高德地图。')
         return
       }
 
-      const securityCode = import.meta.env.VITE_AMAP_JS_CODE
+      const securityCode = AMAP_JS_CODE
       if (securityCode) {
         window._AMapSecurityConfig = { securityJsCode: securityCode }
       }

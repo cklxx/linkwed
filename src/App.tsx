@@ -38,6 +38,7 @@ import {
   type StoredMusicMeta,
   type StoredState,
 } from './utils/persistence'
+import { AMAP_KEY } from './config/amap'
 
 const InvitationMap = lazy(() => import('./components/InvitationMap'))
 
@@ -410,7 +411,7 @@ function App() {
       const keyword = locationQuery.trim()
       if (!keyword) return
 
-      const apiKey = import.meta.env.VITE_AMAP_KEY
+      const apiKey = AMAP_KEY
       if (!apiKey) {
         setLocationError('请先在环境变量中配置 VITE_AMAP_KEY，才能使用地点搜索。')
         return
