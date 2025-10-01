@@ -1445,7 +1445,7 @@ function App() {
             type="button"
             onClick={togglePlayback}
             className={clsx(
-              'flex items-center justify-center gap-2 rounded-full px-4 py-2 text-xs font-semibold transition sm:text-sm',
+              'flex items-center justify-center gap-2 px-4 py-2 text-xs font-semibold transition sm:text-sm',
               isMusicPlaying ? 'bg-gradient-to-r from-blush-500 to-sage-500 text-white shadow' : 'bg-white text-slate-600 shadow-inner',
             )}
           >
