@@ -28,6 +28,16 @@ import type {
   ScheduleItem,
   UploadedImage,
 } from './types/invitation'
+import {
+  fetchAsset,
+  loadSnapshot,
+  removeUnusedAssets,
+  saveSnapshot,
+  upsertAsset,
+  type StoredImageMeta,
+  type StoredMusicMeta,
+  type StoredState,
+} from './utils/persistence'
 
 const InvitationMap = lazy(() => import('./components/InvitationMap'))
 
@@ -130,7 +140,7 @@ function App() {
   const [locationResults, setLocationResults] = useState<LocationResult[]>([])
   const [isSearching, setIsSearching] = useState(false)
   const [locationError, setLocationError] = useState<string | null>(null)
-  const [musicTrack, setMusicTrack] = useState<MusicTrack>(DEFAULT_TRACK)
+  const [musicTrack, setMusicTrack] = useState<MusicTrack>({ ...DEFAULT_TRACK })
   const [isMusicPlaying, setIsMusicPlaying] = useState(false)
   const [musicError, setMusicError] = useState<string | null>(null)
   const [volume, setVolume] = useState(0.6)
@@ -141,6 +151,8 @@ function App() {
 
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const previousMusicUrl = useRef<string | null>(null)
+  const hasHydratedRef = useRef(false)
+  const saveTimerRef = useRef<number | null>(null)
 
   const location = useLocation()
   const navigate = useNavigate()
@@ -178,6 +190,114 @@ function App() {
       }
     }
   }, [galleryImages, heroImage, musicTrack.isDefault])
+
+  useEffect(() => {
+    let cancelled = false
+
+    const hydrateFromStorage = async () => {
+      const snapshot = loadSnapshot()
+      if (!snapshot) {
+        hasHydratedRef.current = true
+        return
+      }
+
+      try {
+        if (!cancelled) {
+          setDetails(snapshot.details)
+          setCoordinates(snapshot.coordinates)
+          setLocationQuery(snapshot.locationQuery)
+        }
+
+        let restoredHero: UploadedImage | null = null
+        if (snapshot.heroImage) {
+          const heroBlob = await fetchAsset(snapshot.heroImage.id)
+          if (heroBlob && !cancelled) {
+            const heroFile = new File([heroBlob], snapshot.heroImage.name, {
+              type: snapshot.heroImage.type ?? heroBlob.type ?? 'image/*',
+            })
+            restoredHero = {
+              id: snapshot.heroImage.id,
+              name: snapshot.heroImage.name,
+              src: URL.createObjectURL(heroFile),
+              file: heroFile,
+            }
+          }
+        }
+        if (!cancelled && restoredHero) {
+          setHeroImage(restoredHero)
+        }
+
+        if (snapshot.galleryImages?.length) {
+          const restoredGallery: UploadedImage[] = []
+          for (const meta of snapshot.galleryImages) {
+            if (cancelled) break
+            const imageBlob = await fetchAsset(meta.id)
+            if (!imageBlob) continue
+            const imageFile = new File([imageBlob], meta.name, {
+              type: meta.type ?? imageBlob.type ?? 'image/*',
+            })
+            restoredGallery.push({
+              id: meta.id,
+              name: meta.name,
+              src: URL.createObjectURL(imageFile),
+              file: imageFile,
+            })
+          }
+          if (!cancelled) {
+            setGalleryImages(restoredGallery)
+          }
+        }
+
+        let nextTrack: MusicTrack = { ...DEFAULT_TRACK }
+        const musicMeta = snapshot.music
+
+        if (musicMeta?.mode === 'preset') {
+          const preset = PRESET_TRACKS.find((item) => item.id === musicMeta.id)
+          nextTrack = preset ? { ...preset } : { ...DEFAULT_TRACK }
+          previousMusicUrl.current = null
+        } else if (musicMeta?.mode === 'custom') {
+          const musicBlob = await fetchAsset(musicMeta.id)
+          if (musicBlob) {
+            const audioFile = new File([musicBlob], musicMeta.name, {
+              type: musicMeta.type ?? musicBlob.type ?? 'audio/mpeg',
+            })
+            const src = URL.createObjectURL(audioFile)
+            nextTrack = {
+              id: musicMeta.id,
+              name: musicMeta.name,
+              src,
+              isDefault: false,
+              credit: musicMeta.credit,
+              file: audioFile,
+            }
+            previousMusicUrl.current = src
+          } else {
+            previousMusicUrl.current = null
+          }
+        }
+
+        if (!cancelled) {
+          setMusicTrack(nextTrack)
+          if (typeof snapshot.volume === 'number' && Number.isFinite(snapshot.volume)) {
+            const clamped = Math.min(Math.max(snapshot.volume, 0), 1)
+            setVolume(clamped)
+          }
+        }
+      } catch (error) {
+        console.error('恢复本地数据失败', error)
+      } finally {
+        if (!cancelled) {
+          hasHydratedRef.current = true
+        }
+      }
+    }
+
+    hydrateFromStorage()
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   useEffect(() => {
     const audio = audioRef.current
@@ -229,6 +349,7 @@ function App() {
         id: crypto.randomUUID(),
         name: file.name,
         src,
+        file,
       }
     })
   }, [])
@@ -239,6 +360,7 @@ function App() {
       id: crypto.randomUUID(),
       name: file.name,
       src: URL.createObjectURL(file),
+      file,
     }))
     setGalleryImages((prev) => {
       const next = [...prev, ...mapped].slice(0, 6)
@@ -402,6 +524,135 @@ function App() {
     [],
   )
 
+  const persistState = useCallback(async () => {
+    if (!hasHydratedRef.current) return
+
+    const keepIds = new Set<string>()
+    let heroMeta: StoredImageMeta | undefined
+
+    if (heroImage) {
+      keepIds.add(heroImage.id)
+      try {
+        let heroSource: Blob
+        if (heroImage.file) {
+          heroSource = heroImage.file
+        } else {
+          const response = await fetch(heroImage.src)
+          heroSource = await response.blob()
+        }
+        await upsertAsset(heroImage.id, heroSource)
+        heroMeta = {
+          id: heroImage.id,
+          name: heroImage.name,
+          type: heroImage.file?.type ?? heroSource.type ?? undefined,
+        }
+      } catch (error) {
+        console.error('保存封面图失败', error)
+      }
+    }
+
+    const galleryMetas: StoredImageMeta[] = []
+    if (galleryImages.length) {
+      const galleryResults = await Promise.all(
+        galleryImages.map(async (image) => {
+          keepIds.add(image.id)
+          try {
+            let gallerySource: Blob
+            if (image.file) {
+              gallerySource = image.file
+            } else {
+              const response = await fetch(image.src)
+              gallerySource = await response.blob()
+            }
+            await upsertAsset(image.id, gallerySource)
+            return {
+              id: image.id,
+              name: image.name,
+              type: image.file?.type ?? gallerySource.type ?? undefined,
+            } satisfies StoredImageMeta
+          } catch (error) {
+            console.error('保存相册图片失败', error)
+            return {
+              id: image.id,
+              name: image.name,
+              type: image.file?.type,
+            } satisfies StoredImageMeta
+          }
+        }),
+      )
+      galleryMetas.push(...galleryResults.filter(Boolean))
+    }
+
+    let musicMeta: StoredMusicMeta
+    const isPresetTrack = PRESET_TRACKS.some((preset) => preset.id === musicTrack.id)
+
+    if (isPresetTrack) {
+      musicMeta = {
+        mode: 'preset',
+        id: musicTrack.id,
+        name: musicTrack.name,
+        credit: musicTrack.credit,
+      }
+    } else {
+      keepIds.add(musicTrack.id)
+      try {
+        let audioSource: Blob
+        if (musicTrack.file) {
+          audioSource = musicTrack.file
+        } else {
+          const response = await fetch(musicTrack.src)
+          audioSource = await response.blob()
+        }
+        await upsertAsset(musicTrack.id, audioSource)
+        musicMeta = {
+          mode: 'custom',
+          id: musicTrack.id,
+          name: musicTrack.name,
+          credit: musicTrack.credit,
+          type: musicTrack.file?.type ?? audioSource.type ?? undefined,
+        }
+      } catch (error) {
+        console.error('保存自定义音乐失败', error)
+        musicMeta = {
+          mode: 'custom',
+          id: musicTrack.id,
+          name: musicTrack.name,
+          credit: musicTrack.credit,
+        }
+      }
+    }
+
+    const snapshot: StoredState = {
+      details,
+      coordinates,
+      locationQuery,
+      heroImage: heroMeta,
+      galleryImages: galleryMetas,
+      music: musicMeta,
+      volume,
+    }
+
+    saveSnapshot(snapshot)
+    await removeUnusedAssets(keepIds)
+  }, [coordinates, details, galleryImages, heroImage, locationQuery, musicTrack, volume])
+
+  useEffect(() => {
+    if (!hasHydratedRef.current) return
+
+    const timer = window.setTimeout(() => {
+      void persistState()
+    }, 480)
+
+    saveTimerRef.current = timer
+
+    return () => {
+      window.clearTimeout(timer)
+      if (saveTimerRef.current === timer) {
+        saveTimerRef.current = null
+      }
+    }
+  }, [persistState])
+
   const selectPresetTrack = (trackId: string) => {
     const selected = PRESET_TRACKS.find((item) => item.id === trackId)
     if (!selected) return
@@ -411,7 +662,7 @@ function App() {
       previousMusicUrl.current = null
     }
 
-    setMusicTrack(selected)
+    setMusicTrack({ ...selected, file: undefined })
     setIsMusicPlaying(false)
     setMusicError(null)
   }
@@ -432,6 +683,7 @@ function App() {
       src,
       isDefault: false,
       credit: '自定义上传',
+      file,
     })
     setIsMusicPlaying(false)
     setMusicError(null)

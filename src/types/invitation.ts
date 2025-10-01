@@ -34,6 +34,7 @@ export interface UploadedImage {
   id: string
   name: string
   src: string
+  file?: File
 }
 
 export interface MusicTrack {
@@ -42,4 +43,5 @@ export interface MusicTrack {
   src: string
   isDefault: boolean
   credit?: string
+  file?: File
 }
