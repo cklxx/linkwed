@@ -933,17 +933,17 @@ function App() {
                         viewport={{ once: true, margin: '-100px' }}
                         transition={{ duration: 0.8, delay: index * 0.1 }}
                         className={clsx(
-                          'grid grid-cols-1 gap-6 items-center',
-                          isDesktop && 'lg:grid-cols-2',
-                          isEven ? 'lg:grid-flow-col' : 'lg:grid-flow-col-dense',
+                          'grid grid-cols-1 gap-8 items-center',
+                          isDesktop && 'lg:grid-cols-[1.4fr_1fr]',
+                          isEven ? '' : 'lg:grid-cols-[1fr_1.4fr]',
                         )}
                       >
                         <motion.div
-                          className={clsx('relative overflow-hidden rounded-2xl', isEven ? 'lg:col-start-1' : 'lg:col-start-2')}
+                          className={clsx('relative overflow-hidden rounded-2xl', isEven ? 'lg:order-1' : 'lg:order-2')}
                           whileHover={{ scale: 1.02 }}
                           transition={{ duration: 0.3 }}
                         >
-                          <div className="aspect-[4/3] relative">
+                          <div className="aspect-[16/10] relative">
                             <img
                               src={image.src}
                               alt={image.name}
@@ -955,8 +955,8 @@ function App() {
 
                         <motion.div
                           className={clsx(
-                            'space-y-4 p-6 sm:p-8',
-                            isEven ? 'lg:col-start-2 lg:text-left' : 'lg:col-start-1 lg:text-right',
+                            'space-y-4 p-4 sm:p-6',
+                            isEven ? 'lg:order-2 lg:text-left' : 'lg:order-1 lg:text-right',
                           )}
                           initial={{ opacity: 0, x: isEven ? 40 : -40 }}
                           whileInView={{ opacity: 1, x: 0 }}
