@@ -1,6 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { ChangeEvent, FormEvent } from 'react'
-import { MapContainer, Marker, Popup, TileLayer, useMap } from 'react-leaflet'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import type { ChangeEvent, FormEvent, RefObject } from 'react'
 import { useDropzone } from 'react-dropzone'
 import { motion } from 'framer-motion'
 import {
@@ -20,22 +19,8 @@ import {
   Wand2,
 } from 'lucide-react'
 import clsx from 'clsx'
-import L from 'leaflet'
-import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png'
-import markerIcon from 'leaflet/dist/images/marker-icon.png'
-import markerShadow from 'leaflet/dist/images/marker-shadow.png'
 
-// Patch the default leaflet marker so the icons resolve correctly when bundled
-L.Marker.prototype.options.icon = L.icon({
-  iconRetinaUrl: markerIcon2x,
-  iconUrl: markerIcon,
-  shadowUrl: markerShadow,
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  tooltipAnchor: [16, -28],
-  shadowSize: [41, 41],
-})
+const InvitationMap = lazy(() => import('./components/InvitationMap'))
 
 interface ScheduleItem {
   time: string
@@ -120,19 +105,6 @@ const DEFAULT_TRACK: MusicTrack = {
   isDefault: true,
 }
 
-const MapViewUpdater = ({ position }: { position: Coordinates }) => {
-  const map = useMap()
-
-  useEffect(() => {
-    map.setView([position.lat, position.lng], 14, {
-      animate: true,
-      duration: 1,
-    })
-  }, [map, position.lat, position.lng])
-
-  return null
-}
-
 const formatDate = (input: string) => {
   try {
     return new Intl.DateTimeFormat('en-US', { dateStyle: 'full' }).format(new Date(input))
@@ -153,6 +125,12 @@ const formatTime = (input: string) => {
     }).format(date)
   } catch (error) {
     return input
+  }
+}
+
+const scrollToElement = (ref: RefObject<HTMLDivElement | null>) => {
+  if (ref.current) {
+    ref.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 }
 
@@ -177,6 +155,9 @@ function App() {
 
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const previousMusicUrl = useRef<string | null>(null)
+  const invitationRef = useRef<HTMLDivElement | null>(null)
+  const mapSectionRef = useRef<HTMLDivElement | null>(null)
+  const rsvpRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -244,6 +225,18 @@ function App() {
         })
     }
   }, [musicTrack, isMusicPlaying])
+
+  const navigateToSection = useCallback(
+    (targetTab: 'preview' | 'editor', target: RefObject<HTMLDivElement | null>) => {
+      if (!isDesktop && mobileTab !== targetTab) {
+        setMobileTab(targetTab)
+        setTimeout(() => scrollToElement(target), 80)
+        return
+      }
+      scrollToElement(target)
+    },
+    [isDesktop, mobileTab],
+  )
 
   const handleDetailChange = (key: keyof InvitationDetails) => (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const value = event.target.value
@@ -437,7 +430,7 @@ function App() {
   const editorVisible = isDesktop || mobileTab === 'editor'
 
   return (
-    <div className="min-h-screen pb-16">
+    <div className="min-h-screen pb-24 sm:pb-16">
       <div className="absolute inset-0 -z-10 bg-hero-texture opacity-80"></div>
       <motion.header
         className="mx-auto max-w-6xl px-4 pt-12 sm:px-6 sm:pt-14"
@@ -490,6 +483,7 @@ function App() {
       <main className="mx-auto mt-8 flex w-full max-w-6xl flex-col gap-10 px-4 sm:mt-12 sm:flex-row sm:gap-12 sm:px-6">
         {previewVisible && (
           <motion.section
+            ref={invitationRef}
             className={clsx('w-full', isDesktop && 'lg:w-2/3')}
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
@@ -590,7 +584,7 @@ function App() {
                         </div>
                       </div>
                     )}
-                    <div className="rounded-2xl border border-slate-100 bg-white/90 p-6 text-center">
+                    <div ref={rsvpRef} className="rounded-2xl border border-slate-100 bg-white/90 p-6 text-center">
                       <p className="text-sm font-medium text-slate-900 sm:text-base">{details.customMessage}</p>
                       <a
                         href={details.rsvpLink}
@@ -800,7 +794,10 @@ function App() {
               </div>
             </section>
 
-            <section className="rounded-3xl border border-white/60 bg-white/80 p-5 shadow-invitation backdrop-blur sm:p-6">
+            <section
+              ref={mapSectionRef}
+              className="rounded-3xl border border-white/60 bg-white/80 p-5 shadow-invitation backdrop-blur sm:p-6"
+            >
               <h2 className="text-base font-semibold text-slate-900 sm:text-lg">Ceremony location</h2>
               <p className="mt-1 text-xs text-slate-500 sm:text-sm">搜索并固定现场位置，地图将实时更新。</p>
 
@@ -844,21 +841,15 @@ function App() {
               )}
 
               <div className="mt-6 overflow-hidden rounded-3xl border border-white/50">
-                <MapContainer center={[coordinates.lat, coordinates.lng]} zoom={14} style={{ height: mapHeight }} scrollWheelZoom={false}>
-                  <MapViewUpdater position={coordinates} />
-                  <TileLayer
-                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                  />
-                  <Marker position={[coordinates.lat, coordinates.lng]}>
-                    <Popup>
-                      <div className="space-y-1">
-                        <p className="text-sm font-semibold text-slate-900">{details.venue}</p>
-                        <p className="text-xs text-slate-600">{details.address}</p>
-                      </div>
-                    </Popup>
-                  </Marker>
-                </MapContainer>
+                <Suspense
+                  fallback={
+                    <div className="flex h-[220px] items-center justify-center bg-slate-50/80 text-sm text-slate-400 sm:h-[260px]">
+                      正在加载地图…
+                    </div>
+                  }
+                >
+                  <InvitationMap coordinates={coordinates} venue={details.venue} address={details.address} height={mapHeight} />
+                </Suspense>
               </div>
             </section>
 
@@ -877,7 +868,10 @@ function App() {
                     <button
                       type="button"
                       onClick={togglePlayback}
-                      className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-blush-500 to-sage-500 text-white shadow-lg transition hover:opacity-90"
+                      className={clsx(
+                        'inline-flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-blush-500 to-sage-500 text-white shadow-lg transition hover:opacity-90',
+                        isMusicPlaying && 'ring-2 ring-offset-2 ring-offset-white/0 ring-sage-300',
+                      )}
                     >
                       {isMusicPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
                     </button>
@@ -925,6 +919,51 @@ function App() {
           </motion.aside>
         )}
       </main>
+
+      {!isDesktop && (
+        <div className="pointer-events-none fixed inset-x-0 bottom-4 flex justify-center px-4 sm:hidden">
+          <div className="pointer-events-auto flex w-full max-w-md items-center justify-between rounded-full bg-white/90 px-4 py-3 shadow-xl backdrop-blur">
+            <button
+              type="button"
+              onClick={() => navigateToSection('preview', invitationRef)}
+              className="flex flex-1 items-center justify-center gap-2 text-xs font-semibold text-slate-600"
+            >
+              <Eye className="h-4 w-4" />
+              邀请函
+            </button>
+            <span className="h-6 w-px bg-slate-200" />
+            <button
+              type="button"
+              onClick={togglePlayback}
+              className={clsx(
+                'flex flex-1 items-center justify-center gap-2 text-xs font-semibold',
+                isMusicPlaying ? 'text-blush-500' : 'text-slate-600',
+              )}
+            >
+              {isMusicPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+              音乐
+            </button>
+            <span className="h-6 w-px bg-slate-200" />
+            <button
+              type="button"
+              onClick={() => navigateToSection('editor', mapSectionRef)}
+              className="flex flex-1 items-center justify-center gap-2 text-xs font-semibold text-slate-600"
+            >
+              <MapPin className="h-4 w-4" />
+              场地
+            </button>
+            <span className="h-6 w-px bg-slate-200" />
+            <button
+              type="button"
+              onClick={() => navigateToSection('preview', rsvpRef)}
+              className="flex flex-1 items-center justify-center gap-2 text-xs font-semibold text-slate-600"
+            >
+              <Heart className="h-4 w-4" />
+              RSVP
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

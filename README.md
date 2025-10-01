@@ -7,6 +7,7 @@ LinkWed is a modern, highly visual wedding invitation experience. It blends pers
 - 📸 **Photo storytelling** — upload a hero portrait plus up to six gallery memories; instant previews with graceful fallbacks.
 - 📍 **Interactive venue map** — search any location via OpenStreetMap (Nominatim) and drop a marker with live address sync.
 - 🎼 **Atmospheric soundtrack** — built-in ambient loop with the option to upload custom audio and control playback volume.
+- 📱 **Mobile-first flow** — phone-sized tab switcher, sticky quick actions, and touch-friendly layout tweaks.
 - ⚙️ **One-click deployment** — `deploy.sh` auto-detects Docker for production builds, with a local preview fallback.
 
 ## Tech Stack
@@ -52,7 +53,7 @@ Override the exposed port with `PORT=8080 ./deploy.sh`.
 
 ## Feature Guide
 - **Photos** — drop a hero image (recommended 1800×1200) and up to six gallery shots. Hover to remove gallery items.
-- **Location** — search within the editor (OpenStreetMap). Selecting a result updates both the map marker and the invitation’s venue details.
+- **Location** — search within the editor (OpenStreetMap). Selecting a result updates both the map marker and the invitation’s venue details, and the map chunk loads on demand for faster mobile start.
 - **Music** — a curated ambient loop ships in `public/media/background.wav`. Upload any `audio/*` file to replace it and control playback/volume from the panel.
 
 ## Notes
