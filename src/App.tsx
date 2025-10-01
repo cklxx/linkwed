@@ -5,8 +5,6 @@ import { motion } from 'framer-motion'
 import { useLocation, useNavigate } from 'react-router-dom'
 import {
   Calendar,
-  ChevronLeft,
-  ChevronRight,
   Clock,
   Eye,
   Heart,
@@ -158,7 +156,6 @@ function App() {
   const [isMusicPlaying, setIsMusicPlaying] = useState(true)
   const [musicError, setMusicError] = useState<string | null>(null)
   const [volume, setVolume] = useState(0.6)
-  const [currentSlide, setCurrentSlide] = useState(0)
   const [isDesktop, setIsDesktop] = useState(() => {
     if (typeof window === 'undefined') return false
     return window.matchMedia('(min-width: 1024px)').matches
