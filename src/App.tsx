@@ -40,6 +40,17 @@ import {
 } from './utils/persistence'
 import { AMAP_KEY } from './config/amap'
 
+const createId = () => {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    try {
+      return crypto.randomUUID()
+    } catch (error) {
+      // ignore and fall through to fallback
+    }
+  }
+  return `id-${Math.random().toString(36).slice(2)}-${Date.now().toString(36)}`
+}
+
 const InvitationMap = lazy(() => import('./components/InvitationMap'))
 
 const DEFAULT_DETAILS: InvitationDetails = {
@@ -347,7 +358,7 @@ function App() {
     setHeroImage((prev) => {
       if (prev) URL.revokeObjectURL(prev.src)
       return {
-        id: crypto.randomUUID(),
+        id: createId(),
         name: file.name,
         src,
         file,
@@ -358,7 +369,7 @@ function App() {
   const onDropGallery = useCallback((acceptedFiles: File[]) => {
     if (!acceptedFiles.length) return
     const mapped = acceptedFiles.slice(0, 6).map((file) => ({
-      id: crypto.randomUUID(),
+      id: createId(),
       name: file.name,
       src: URL.createObjectURL(file),
       file,
@@ -682,7 +693,7 @@ function App() {
     const src = URL.createObjectURL(file)
     previousMusicUrl.current = src
     setMusicTrack({
-      id: crypto.randomUUID(),
+      id: createId(),
       name: file.name,
       src,
       isDefault: false,
